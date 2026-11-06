@@ -1,4 +1,5 @@
 name: Sourcehawk Scan
+
 on:
   push:
     branches:
@@ -8,13 +9,37 @@ on:
     branches:
       - main
       - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      # SourceHawk includes its runtime in a Docker image. The Python evaluation
+      # dependencies, GPU models, and translation-service credentials are not needed.
       - name: Sourcehawk Scan
-        uses: optum/sourcehawk-scan-github-action@main
+        uses: optum/sourcehawk-scan-github-action@370ec8ab57741c8c3a62337315e6e9bf8b32fa00
+        with:
+          repository-root: .
+          config-file: sourcehawk.yml
+          output-format: TEXT
+          output-file: sourcehawk-scan-results.txt
+          fail-on-warnings: 'false'
+          fail-build: 'true'
 
-
-
+      - name: Upload scan results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sourcehawk-scan-results
+          path: sourcehawk-scan-results.txt
+          if-no-files-found: warn
